@@ -50,11 +50,11 @@ def test(net, test_loader, device='cpu'):
 
 
 def train_model(net, criterion, optimizer, scheduler, train_loader, test_loader=None,
-                print_every=100, n_epochs=10, device='cpu', save_model=True):
+                print_every=100, n_epochs=10, device='cpu', save_model=True, start_training_epoch_at=1):
     for e in range(1, n_epochs+1):
         t0 = time.perf_counter()
         e_loss = []
-        for batch_num, (seq_attnmask_labels) in enumerate(tqdm(train_loader), start=1):
+        for batch_num, (seq_attnmask_labels) in enumerate(tqdm(train_loader), start=start_training_epoch_at):
             # Clear gradients
             optimizer.zero_grad()
 
@@ -129,7 +129,8 @@ def main():
     # Creating instances of training and validation set
     train_df, valid_df = dataset.get_train_valid_df(dataset_fname = config.train_fname,
                                                     sample_ratio=config.SAMPLE_RATIO,
-                                                    valid_ratio=config.VALIDATION_SET_RATIO)
+                                                    valid_ratio=config.VALIDATION_SET_RATIO,
+                                                    save_dfs=False)
 
     #for dataset loader
     train_set = dataset.dataset(train_df, max_len=config.MAX_SEQ_LEN)
@@ -142,8 +143,17 @@ def main():
                              batch_size=config.BATCH_SIZE, num_workers=config.NUM_CPU_WORKERS)
 
     #creating BERT model
-    bert_model = model.bert_classifier(freeze_bert=config.BERT_LAYER_FREEZE)
+    if config.TRAINED_MODEL_FNAME:
+        bert_model = torch.load(config.TRAINED_MODEL_FNAME)
+        print(f'Loaded trained model: {bert_model} from file: {config.TRAINED_MODEL_FNAME}')
+    else:
+        bert_model = model.bert_classifier(freeze_bert=config.BERT_LAYER_FREEZE)
+        print(f"created NEW BERT model for finetuning: {bert_model}")
     bert_model.cuda()
+
+    # # Multi GPU setting
+    # if config.MULTIGPU:
+    #     bert_model = nn.DataParallel(bert_model, device_ids=[0, 1, 2, 3])
 
     #loss function
     class_weights_dict = get_class_weigts(train_df)
@@ -174,17 +184,11 @@ def main():
     optimizer = AdamW(optimizer_parameters, lr=config.LR)
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=num_train_steps)
 
-    # Multi GPU setting
-    if config.MULTIGPU:
-        bert_model = nn.DataParallel(bert_model,  device_ids=[0, 1, 2, 3])
-
-
-    print(f"created BERT model for finetuning: {bert_model}")
-
     # aucs_for_samples = test(bert_model, test_loader, device=device)
     # print(f'AUC before training: {aucs_for_samples.round(2)}')
     train_model(bert_model, criterion, optimizer, scheduler, train_loader, test_loader,
-                print_every=config.PRINT_EVERY, n_epochs=config.NUM_EPOCHS, device=device)
+                print_every=config.PRINT_EVERY, n_epochs=config.NUM_EPOCHS, device=device,
+                start_training_epoch_at=config.START_TRAINING_EPOCH_AT)
 
 
 if __name__ == '__main__':

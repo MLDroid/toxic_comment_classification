@@ -6,8 +6,7 @@ import os
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
 MODEL_NAME =  sys.argv[1]
-# MODEL_NAME =  'bert-base-uncased'
-# MODEL_NAME = 'roberta-base'
+# MODEL_NAME = 'bert-base-uncased', 'roberta-base', 'distilbert-base-uncased'
 
 data_folder = './data'
 train_fname = data_folder + '/train.csv'
@@ -28,7 +27,9 @@ MULTIGPU = True if torch.cuda.device_count() > 1 else False #when using xlarge v
 
 #these 2 are not used yet
 TRAINED_MODEL_FNAME_PREFIX = MODEL_NAME.upper()+'_toxic_comment_model'
-TRAINED_MODEL_FNAME = None
+TRAINED_MODEL_FNAME = MODEL_NAME.upper()+'_toxic_comment_model_e_10.pt'
+
+START_TRAINING_EPOCH_AT = 11
 
 
 
