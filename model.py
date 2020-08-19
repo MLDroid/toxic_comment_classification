@@ -1,13 +1,16 @@
 import torch.nn as nn
-from transformers import BertModel, DistilBertModel
+from transformers import AutoModel
+
+import config
 
 
 class bert_classifier(nn.Module):
     def __init__(self, freeze_bert=True):
         super(bert_classifier, self).__init__()
         # Instantiating BERT model object
-        # self.bert_layer = BertModel.from_pretrained('bert-base-uncased')
-        self.bert_layer = DistilBertModel.from_pretrained('distilbert-base-uncased')
+        self.model_name = config.MODEL_NAME
+        self.bert_layer = AutoModel.from_pretrained(self.model_name)
+        print(f'Loaded model from AutoMdodel for model name: {self.model_name}')
 
         # Freeze bert layers
         if freeze_bert:
@@ -19,6 +22,15 @@ class bert_classifier(nn.Module):
 
         #Dropout
         self.dp20 = nn.Dropout(0.2)
+
+    def forward(self, seq, attn_masks):
+        if self.model_name.startswith('distil') or self.model_name.startswith('roberta'):
+            # print('calling: forward_distilbert')
+            return self.forward_distilbert(seq,attn_masks)
+        else:
+            # print('calling forward_bert')
+            return self.forward_bert(seq, attn_masks)
+
 
     def forward_bert(self, seq, attn_masks):
         '''
@@ -36,13 +48,16 @@ class bert_classifier(nn.Module):
         op = pooled_op
         op = self.dp20(op)
 
-        # Feeding cls_rep to the classifier layer
-        logits = self.fc(op)
+        # Feeding op to the classifier layer
+        logits_per_layer = []
+        for fc in self.fc_layers:
+            logits = fc(op)
+            logits_per_layer.append(logits)
 
-        return logits
+        return logits_per_layer
 
 
-    def forward(self, seq, attn_masks):
+    def forward_distilbert(self, seq, attn_masks):
         '''
         Inputs:
             -seq : Tensor of shape [B, T] containing token ids of sequences
@@ -57,7 +72,7 @@ class bert_classifier(nn.Module):
         op = cont_reps[0].mean(1)
         op = self.dp20(op)
 
-        # Feeding cls_rep to the classifier layer
+        # Feeding op to the classifier layer
         logits_per_layer = []
         for fc in self.fc_layers:
             logits = fc(op)
