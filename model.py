@@ -42,7 +42,6 @@ class bert_classifier(nn.Module):
 
         # Feeding the input to BERT model to obtain contextualized representations
         last_hidden_states, pooled_op = self.bert_layer(seq, attention_mask=attn_masks)
-        # del pooled_op
 
         # Obtaining the representation of [CLS] head
         # op = last_hidden_states.mean(1) #mean of all last hidden states
