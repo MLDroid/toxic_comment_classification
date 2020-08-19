@@ -15,36 +15,42 @@ import dataset
 import model
 
 def get_auc_from_logits(logits, labels):
-    auc_for_all_classes = np.zeros(6)
-    preds = np.zeros(labels.shape)
-    for class_id in range(6):
-        pred_class = logits[class_id]
-        pred_class = pred_class.argmax(1)
-        preds[:, class_id] = pred_class.cpu().numpy()
-        try:
-            auc = roc_auc_score(labels[:, class_id], preds[:, class_id])
-        except ValueError:
-            auc = 0.5
-
-        auc_for_all_classes[class_id] = auc
-    return auc_for_all_classes
-
-
-def test(net, test_loader, device='cpu'):
-    aucs_for_samples = []
-    net.eval()
-    with torch.no_grad():
-        for (seq, attn_masks, labels) in tqdm(test_loader):
-            seq, attn_masks = seq.cuda(device), attn_masks.cuda(device)
-            logits = net(seq, attn_masks)
-            auc_for_all_classes = get_auc_from_logits(logits, labels)
-            aucs_for_samples.append(auc_for_all_classes)
-
-    aucs_for_samples = np.array(aucs_for_samples).mean(0)
+    all_preds = np.array([logits[i].argmax(1).cpu().numpy() for i in range(6)]).T
+    all_trues = labels
+    aucs_for_samples = np.array([safe_calc_auc(all_trues[:, col], all_preds[:, col]) for col in range(6)])
     return aucs_for_samples
 
 
-def train_model(net, criterion, optimizer, scheduler, train_loader, test_loader=None, print_every=100, n_epochs=10, device='cpu'):
+def safe_calc_auc(trues, preds):
+    try:
+        auc = roc_auc_score(trues, preds)
+    except:
+        auc = 0.5
+    return auc
+
+
+def test(net, test_loader, device='cpu'):
+    net.eval()
+    with torch.no_grad():
+        for batch_num, (seq, attn_masks, labels) in enumerate(tqdm(test_loader), start=1):
+            seq, attn_masks = seq.cuda(device), attn_masks.cuda(device)
+            logits = net(seq, attn_masks)
+            preds = np.array([logits[i].argmax(1).cpu().numpy() for i in range(6)]).T
+            labels = labels.cpu().numpy()
+            if batch_num == 1:
+                all_trues = labels
+                all_preds = preds
+            else:
+                all_trues = np.vstack([all_trues, labels])
+                all_preds = np.vstack([all_preds, preds])
+
+        aucs_for_samples = np.array([safe_calc_auc(all_trues[:,col], all_preds[:,col]) for col in range(6)])
+
+    return aucs_for_samples
+
+
+def train_model(net, criterion, optimizer, scheduler, train_loader, test_loader=None,
+                print_every=100, n_epochs=10, device='cpu', save_model=True):
     for e in range(1, n_epochs+1):
         t0 = time.perf_counter()
         e_loss = []
@@ -89,6 +95,13 @@ def train_model(net, criterion, optimizer, scheduler, train_loader, test_loader=
             test_acc = test(net, test_loader, device=device)
             print(f'After epoch: {e}, test AUC: {test_acc.round(2)}')
 
+        if save_model:
+            save_fname = config.TRAINED_MODEL_FNAME_PREFIX + f'_e_{e}.pt'
+            torch.save(net, save_fname)
+            print(f'Saved model at: {save_fname} after epoch: {e}')
+
+
+
 
 def compute_class_weight_balanced(y):
     n_samples = len(y)
@@ -124,11 +137,9 @@ def main():
 
     #creating dataloader
     train_loader = DataLoader(train_set, shuffle = True,
-                              batch_size=config.BATCH_SIZE,
-                              num_workers=config.NUM_CPU_WORKERS)
+                              batch_size=config.BATCH_SIZE, num_workers=config.NUM_CPU_WORKERS)
     test_loader = DataLoader(valid_set, shuffle = True,
-                             batch_size=config.BATCH_SIZE,
-                             num_workers=config.NUM_CPU_WORKERS)
+                             batch_size=config.BATCH_SIZE, num_workers=config.NUM_CPU_WORKERS)
 
     #creating BERT model
     bert_model = model.bert_classifier(freeze_bert=config.BERT_LAYER_FREEZE)
