@@ -51,10 +51,11 @@ def test(net, test_loader, device='cpu'):
 
 def train_model(net, criterion, optimizer, scheduler, train_loader, test_loader=None,
                 print_every=100, n_epochs=10, device='cpu', save_model=True, start_training_epoch_at=1):
-    for e in range(1, n_epochs+1):
+
+    for e in range(start_training_epoch_at, start_training_epoch_at+n_epochs+1):
         t0 = time.perf_counter()
         e_loss = []
-        for batch_num, (seq_attnmask_labels) in enumerate(tqdm(train_loader), start=start_training_epoch_at):
+        for batch_num, (seq_attnmask_labels) in enumerate(tqdm(train_loader), start=1):
             # Clear gradients
             optimizer.zero_grad()
 
