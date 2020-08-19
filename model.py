@@ -39,7 +39,6 @@ class bert_classifier(nn.Module):
         # Feeding cls_rep to the classifier layer
         logits = self.fc(op)
 
-
         return logits
 
 
