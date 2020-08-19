@@ -22,7 +22,7 @@ def get_train_valid_df(dataset_fname, sample_ratio=None, valid_ratio=0.2, save_d
     train_df, valid_df = train_test_split(df, random_state=42, test_size=valid_ratio, shuffle=True)
 
     if save_dfs:
-        model_name = config.MODEL_NAME.upper()
+        model_name = config.MODEL_NAME.upper().replace('/','-')
         train_df.to_csv(f'{model_name}_train_df_.csv',index=False)
         valid_df.to_csv(f'{model_name}_valid_df_.csv',index=False)
 
@@ -33,10 +33,10 @@ def get_train_valid_df(dataset_fname, sample_ratio=None, valid_ratio=0.2, save_d
 class dataset(Dataset):
     def __init__(self, df, max_len):
         self.model_name = config.MODEL_NAME
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, use_fast=True)
-        print(f'Using tokenizer: {self.tokenizer} for model: {self.model_name}')
-
         self.max_len = max_len
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, use_fast=True)
+
+        print(f'Set max seq. len: {self.max_len} for tokenizer: {self.tokenizer}')
 
         self.sent_token_ids_attn_masks = [self._get_token_ids_attn_mask(s) for s in tqdm(df.comment_text)]
         self.labels = self._get_tc_dataset_labels(df)

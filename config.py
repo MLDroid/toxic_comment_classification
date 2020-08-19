@@ -15,6 +15,8 @@ train_fname = data_folder + '/train.csv'
 test_fname = data_folder + '/test.csv'
 
 MAX_SEQ_LEN = 512
+if 'longformer' in MODEL_NAME:
+    MAX_SEQ_LEN = 4096
 NUM_EPOCHS = 10
 BATCH_SIZE = 200
 LR = 3e-4

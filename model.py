@@ -24,7 +24,8 @@ class bert_classifier(nn.Module):
         self.dp20 = nn.Dropout(0.2)
 
     def forward(self, seq, attn_masks):
-        if self.model_name.startswith('distil') or self.model_name.startswith('roberta'):
+        if self.model_name.startswith('distil') or self.model_name.startswith('roberta')\
+                or self.model_name.startswith('albert'):
             # print('calling: forward_distilbert')
             return self.forward_distilbert(seq,attn_masks)
         else:
