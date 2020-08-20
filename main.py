@@ -73,7 +73,7 @@ def train_model(net, criterion, optimizer, scheduler, train_loader, test_loader=
             for class_id in range(6):
                 pred = logits[class_id]
                 true = labels[:,class_id]
-                loss_for_this_class = criterion[class_id](pred, true.long())
+                loss_for_this_class = criterion[class_id](pred, true)
                 loss_all_classes += loss_for_this_class
             e_loss.append(loss_all_classes.item())
 
