@@ -3,12 +3,10 @@ import numpy as np
 import time
 from torch.utils.data import DataLoader
 import torch.nn as nn
-import torch.optim as optim
 from tqdm import tqdm
 from transformers import AdamW
 from transformers import get_linear_schedule_with_warmup
 from sklearn.metrics import roc_auc_score
-
 
 import config
 import dataset
@@ -152,9 +150,9 @@ def main():
         print(f"created NEW BERT model for finetuning: {bert_model}")
     bert_model.cuda()
 
-    # # Multi GPU setting
-    # if config.MULTIGPU:
-    #     bert_model = nn.DataParallel(bert_model, device_ids=[0, 1, 2, 3])
+    # Multi GPU setting
+    if config.MULTIGPU:
+        bert_model = nn.DataParallel(bert_model, device_ids=[0, 1, 2, 3])
 
     #loss function
     class_weights_dict = get_class_weigts(train_df)
@@ -185,8 +183,6 @@ def main():
     optimizer = AdamW(optimizer_parameters, lr=config.LR)
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=num_train_steps)
 
-    # aucs_for_samples = test(bert_model, test_loader, device=device)
-    # print(f'AUC before training: {aucs_for_samples.round(2)}')
     train_model(bert_model, criterion, optimizer, scheduler, train_loader, test_loader,
                 print_every=config.PRINT_EVERY, n_epochs=config.NUM_EPOCHS, device=device,
                 start_training_epoch_at=config.START_TRAINING_EPOCH_AT)

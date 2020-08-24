@@ -47,8 +47,10 @@ class dataset(Dataset):
         return labels
 
 
-    def _get_token_ids_attn_mask(self, sentence):
-        sentence = sentence.lower().strip()
+    def _get_token_ids_attn_mask(self, sentence, lower=False):
+        if lower:
+            sentence = sentence.lower()
+        sentence = sentence.strip()
         sentence = ' '.join(sentence.split()) #make sure unwanted spaces are removed
 
         #encode_plus is better than calling tokenizer.tokenize and get the IDs later - ref:Abisek Thakur youtube video
