@@ -152,7 +152,6 @@ def main():
             "weight_decay": 0.0,
         },
     ]
-    # print(optimizer_parameters)
 
     num_train_steps = int(len(train_set) / config.BATCH_SIZE * config.NUM_EPOCHS)
     optimizer = AdamW(optimizer_parameters, lr=config.LR)

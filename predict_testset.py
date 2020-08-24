@@ -2,9 +2,11 @@ import torch
 import numpy as np
 import time
 from torch.utils.data import DataLoader
+import torch.nn as nn
 from tqdm import tqdm
 import pandas as pd
 from copy import deepcopy
+import sys
 
 import config
 import dataset
@@ -36,13 +38,15 @@ def get_sub_df(full_test_df, all_preds):
 
 
 def main():
+    config.MODEL_NAME = sys.argv[1]
+    model_pt_fname = sys.argv[2]
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
     #for now!!!
-    device = 'cpu'
+    # device = 'cpu'
 
     # Creating instances of training and validation set
-    full_test_df = pd.read_csv(config.test_fname)
+    full_test_df = pd.read_csv(config.test_fname, encoding = "ISO-8859-1")
     # full_test_df = full_test_df.sample(frac=.0001)
 
     #for dataset loader
@@ -55,20 +59,14 @@ def main():
                                      batch_size=config.BATCH_SIZE, num_workers=config.NUM_CPU_WORKERS)
 
     #Loading a trained model
-    bert_model = torch.load(config.TRAINED_MODEL_FNAME)
-    torch.load(config.TRAINED_MODEL_FNAME, map_location='cpu')
-    print(f'Loaded trained model: {bert_model} from file: {config.TRAINED_MODEL_FNAME}')
-    # bert_model.to(device)
-
-    # Multi GPU setting
-    # if config.MULTIGPU and use_cuda:
-    #     bert_model = nn.DataParallel(bert_model,  device_ids=[0, 1, 2, 3])
+    bert_model = torch.load(model_pt_fname, map_location=device)
+    print(f'Loaded trained model: {bert_model} from file: {model_pt_fname}')
 
     all_preds = test(bert_model, test_loader = full_test_ds_loader, device=device)
 
     sub_df = get_sub_df(full_test_df, all_preds)
 
-    save_fname = f'{config.TRAINED_MODEL_FNAME}_preds.csv'
+    save_fname = f'{model_pt_fname}_preds.csv'
     sub_df.to_csv(save_fname,index=False)
 
     print(f'model predictions saved to {save_fname}')
